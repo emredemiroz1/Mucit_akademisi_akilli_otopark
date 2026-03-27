@@ -29,6 +29,8 @@
     .btn-touch:active:not(:disabled) { transform: scale(0.96); }
     .loader { width: 20px; height: 20px; border: 3px solid rgba(255, 255, 255, 0.3); border-bottom-color: #fff; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes pulse-fast { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .7; transform: scale(1.1); } }
+    .animate-pulse-fast { animation: pulse-fast 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
   </style>
 
   <script type="module">
@@ -64,34 +66,50 @@
       return (
         <div className="mb-6 w-full max-w-[420px] mx-auto animate-[fadeIn_0.5s_ease-out]">
           <div className="text-center mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2">
-            <span>👁️</span> Dijital Otopark İkizi (6 Kapasite)
+            <span>👁️</span> Tam Otonom Dijital İkiz
           </div>
           <div className="w-full bg-[#1e293b] rounded-[32px] border-4 border-[#334155] p-4 shadow-xl flex flex-col relative overflow-hidden">
+             
+             {/* Araç Park Yerleri */}
              <div className="flex-1 bg-[#0f172a] rounded-xl border border-white/5 relative grid grid-cols-3 grid-rows-2 h-48 mb-6">
                <div className="absolute top-0 bottom-0 left-1/3 w-px bg-white/10 border-dashed"></div>
                <div className="absolute top-0 bottom-0 left-2/3 w-px bg-white/10 border-dashed"></div>
                <div className="absolute left-0 right-0 top-1/2 h-px bg-white/10 border-dashed"></div>
                {[0, 1, 2, 3, 4, 5].map((slotIdx) => {
-                 const isFull = data.slots[slotIdx];
+                 const slot = data.slots[slotIdx];
                  return (
-                   <div key={slotIdx} className="relative flex items-center justify-center h-full w-full">
+                   <div key={slotIdx} className="relative flex flex-col items-center justify-center h-full w-full">
                      <div className="absolute top-2 left-2 text-[9px] font-black text-slate-600 tracking-widest">P{slotIdx+1}</div>
-                     {isFull ? <div className="text-3xl animate-[fadeIn_0.3s_ease-out]">🚗</div> : <div className="text-3xl font-black text-emerald-500/10 select-none">P</div>}
+                     {slot.occupied ? (
+                       <div className="flex flex-col items-center animate-[fadeIn_0.3s_ease-out]">
+                         <div className="text-3xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">🚗</div>
+                         <div className="text-[8px] text-cyan-400 font-bold tracking-widest mt-1 bg-cyan-500/10 px-1.5 py-0.5 rounded">GİRİŞ: {slot.time}</div>
+                       </div>
+                     ) : (
+                       <div className="text-3xl font-black text-emerald-500/10 select-none">P</div>
+                     )}
                    </div>
                  )
                })}
              </div>
+
+             {/* Giriş ve Çıkış Sensör Bölgeleri */}
              <div className="flex justify-between items-end px-2 gap-6 relative">
-               <div className="flex-1 flex flex-col gap-1 relative">
-                 <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Giriş</div>
+               {/* GİRİŞ */}
+               <div className="flex-1 flex flex-col gap-1 relative h-16 justify-end">
+                 <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Giriş Sensörü</div>
+                 {data.carAtEntry && <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-3xl animate-bounce drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] z-20">🚙</div>}
                  <div className="w-full h-3 rounded bg-slate-900 border border-white/10 relative overflow-hidden">
                    <div className={`absolute inset-0 transition-all duration-500 ${data.entryGateOpen ? 'bg-emerald-500/30' : 'bg-red-500/50'}`}>
                      {!data.entryGateOpen && <div className="w-full h-full" style={{backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(239,68,68,0.6) 8px, rgba(239,68,68,0.6) 16px)'}}></div>}
                    </div>
                  </div>
                </div>
-               <div className="flex-1 flex flex-col gap-1 text-right relative">
-                 <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Çıkış</div>
+
+               {/* ÇIKIŞ */}
+               <div className="flex-1 flex flex-col gap-1 relative h-16 justify-end text-right">
+                 <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Çıkış Sensörü</div>
+                 {data.carAtExit && <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-3xl animate-pulse drop-shadow-[0_0_15px_rgba(239,68,68,0.4)] z-20">🚗</div>}
                  <div className="w-full h-3 rounded bg-slate-900 border border-white/10 relative overflow-hidden">
                    <div className={`absolute inset-0 transition-all duration-500 ${data.exitGateOpen ? 'bg-emerald-500/30' : 'bg-red-500/50'}`}>
                      {!data.exitGateOpen && <div className="w-full h-full" style={{backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(239,68,68,0.6) 8px, rgba(239,68,68,0.6) 16px)'}}></div>}
@@ -110,9 +128,33 @@
       const [pin, setPin] = useState("");
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
+      const [successMsg, setSuccessMsg] = useState("");
       const [isSimulating, setIsSimulating] = useState(false); 
+      
+      // Modal State: 0: Kapalı, 1: Ödeme Gişesi, 2: Çağrı Merkezi, 3: Başarılı
+      const [paymentStep, setPaymentStep] = useState(0); 
+      const [callStatusText, setCallStatusText] = useState("");
+      
+      const [now, setNow] = useState(Date.now()); // Canlı dakika hesabı için
 
-      const [parkData, setParkData] = useState({ occupied: 0, slots: Array(6).fill(false), entryGateOpen: false, exitGateOpen: false });
+      useEffect(() => {
+         const interval = setInterval(() => { setNow(Date.now()); }, 10000); 
+         return () => clearInterval(interval);
+      }, []);
+
+      const defaultSlots = Array(6).fill({ occupied: false, time: "", entryTimestamp: null });
+      const [parkData, setParkData] = useState({ 
+        occupied: 0, 
+        slots: defaultSlots, 
+        entryGateOpen: false, 
+        exitGateOpen: false,
+        carAtEntry: false,
+        carAtExit: false,
+        carOrigin: -1, 
+        carPaid: false,
+        carFeeText: "", 
+        carDurationText: "" 
+      });
 
       useEffect(() => {
         const t = setInterval(() => { if (window.firebaseReady && window.FB) { setReady(true); clearInterval(t); } }, 100);
@@ -132,83 +174,201 @@
         const unsubPark = window.FB.onSnapshot(ref, (snap) => {
             if (snap.exists()) {
               const d = snap.data();
-              let occupied = 0; let slots = Array(6).fill(false); let entryGateOpen = false; let exitGateOpen = false;
+              const parsedSlots = Array(6).fill({ occupied: false, time: "", entryTimestamp: null });
+              let activeCount = 0; 
 
-              if (d.occupied !== undefined) {
-                occupied = d.occupied;
-                if(d.slots && Array.isArray(d.slots)) { for(let i=0; i<d.slots.length && i<6; i++) slots[i] = d.slots[i]; }
-                entryGateOpen = d.entryGateOpen || false; exitGateOpen = d.exitGateOpen || false;
-              } else if (d.fields) {
-                occupied = d.fields.occupied?.integerValue ? Number(d.fields.occupied.integerValue) : 0;
-                entryGateOpen = d.fields.entryGateOpen?.booleanValue || false; exitGateOpen = d.fields.exitGateOpen?.booleanValue || false;
-                if (d.fields.slots?.arrayValue?.values) {
-                  let fSlots = d.fields.slots.arrayValue.values.map(v => v.booleanValue === true);
-                  for(let i=0; i<fSlots.length && i<6; i++) slots[i] = fSlots[i];
-                }
+              if (d.slots && Array.isArray(d.slots)) {
+                 for(let i=0; i<6; i++) {
+                    if(d.slots[i] && d.slots[i].occupied === true) {
+                       parsedSlots[i] = {
+                          occupied: true,
+                          time: d.slots[i].time || "",
+                          entryTimestamp: d.slots[i].entryTimestamp || Date.now()
+                       };
+                       activeCount++;
+                    }
+                 }
               }
-              setParkData({ occupied, slots, entryGateOpen, exitGateOpen });
+              
+              setParkData({ 
+                occupied: activeCount, // Hata giderildi: Doğrudan okunan gerçek sayı
+                slots: parsedSlots, 
+                entryGateOpen: d.entryGateOpen === true, 
+                exitGateOpen: d.exitGateOpen === true,
+                carAtEntry: d.carAtEntry === true,
+                carAtExit: d.carAtExit === true,
+                carOrigin: d.carOrigin !== undefined ? d.carOrigin : -1,
+                carPaid: d.carPaid === true,
+                carFeeText: d.carFeeText || "",
+                carDurationText: d.carDurationText || ""
+              });
             }
         });
         return () => unsubPark();
       }, [user]);
 
-      const togglePark = async (field, value) => {
+      const updateDB = async (updates) => {
         if (!user) return;
         const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "parking", "status");
-        await window.FB.setDoc(ref, { [field]: value }, { merge: true }).catch(console.error);
+        await window.FB.setDoc(ref, updates, { merge: true }).catch(console.error);
       };
 
-      const simulateParkEntry = async () => {
-        if (isSimulating) return;
+      const showTempMsg = (msg, isError = false) => {
+        if (isError) {
+           setErrorMsg(msg);
+           setTimeout(() => setErrorMsg(""), 4000);
+        } else {
+           setSuccessMsg(msg);
+           setTimeout(() => setSuccessMsg(""), 4000);
+        }
+      };
+
+      // FİYAT HESAPLAMA ALGORİTMASI (TARİFE TABLOSUNA BİREBİR UYGUN)
+      const calculateFee = (entryTimestamp) => {
+         if (!entryTimestamp) return { text: "0 dk", feeText: "ÜCRETSİZ" };
+         
+         const diffMs = now - entryTimestamp;
+         const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+         
+         let fee = 0;
+         if (diffMins <= 25) {
+             fee = 0;
+         } else if (diffMins <= 60) {
+             fee = 9; // 25-60 Dakika
+         } else {
+             // 60 Dakikadan fazlaysa her başlayan saat = 1 ilave saat
+             const additionalHours = Math.ceil((diffMins - 60) / 60); 
+             fee = 9; // İlk saatin temel ücreti
+             
+             if (additionalHours <= 11) {
+                // 12 Saate kadar her ilave saat +1.50 TL
+                fee += additionalHours * 1.50;
+             } else {
+                fee += 11 * 1.50; // İlk 11 ilave saat (Toplam 12 saat eder)
+                fee += (additionalHours - 11) * 1.00; // 12 saat üzeri her saat +1.00 TL
+             }
+         }
+         
+         const text = diffMins < 60 ? `${diffMins} dk` : `${Math.floor(diffMins/60)} sa ${diffMins%60} dk`;
+         const feeText = fee === 0 ? "ÜCRETSİZ" : `${fee.toFixed(2)} TL`;
+         
+         return { text, feeText };
+      };
+
+      // ARAÇ GİRİŞİ
+      const handleCarArrives = async () => {
+        if (isSimulating || parkData.carAtEntry) return;
         if (parkData.occupied >= 6) {
-          setErrorMsg("⚠️ İçeride hiç yer yok! Giriş bariyeri açılamaz.");
-          setTimeout(() => setErrorMsg(""), 4000);
+          showTempMsg("⚠️ Otopark TAMAMEN DOLU! Giriş izni verilmedi.", true);
           return;
         }
+
         setIsSimulating(true);
-        await togglePark("entryGateOpen", true);
+        await updateDB({ carAtEntry: true });
+        
         setTimeout(async () => {
-          const newSlots = [...parkData.slots];
-          const emptyIdx = newSlots.findIndex(s => !s);
-          if (emptyIdx !== -1) {
-            newSlots[emptyIdx] = true;
-            const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "parking", "status");
-            await window.FB.setDoc(ref, { slots: newSlots, occupied: parkData.occupied + 1 }, { merge: true });
-          }
-          setTimeout(async () => { await togglePark("entryGateOpen", false); setIsSimulating(false); }, 1500);
+          await updateDB({ entryGateOpen: true });
+          
+          setTimeout(async () => {
+            const newSlots = [...parkData.slots];
+            const emptyIdx = newSlots.findIndex(s => !s.occupied);
+            
+            if (emptyIdx !== -1) {
+              const dateObj = new Date();
+              const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+              newSlots[emptyIdx] = { occupied: true, time: timeStr, entryTimestamp: dateObj.getTime() };
+              await updateDB({ slots: newSlots, carAtEntry: false });
+            }
+
+            setTimeout(async () => { 
+              await updateDB({ entryGateOpen: false }); 
+              setIsSimulating(false); 
+              showTempMsg(`✅ Araç P${emptyIdx + 1} numaralı alana park etti.`);
+            }, 1000);
+
+          }, 1500);
         }, 1500);
       };
 
-      const simulateParkExit = async () => {
-        if (isSimulating) return;
-        if (parkData.occupied <= 0) return;
-        setIsSimulating(true);
-        await togglePark("exitGateOpen", true);
-        setTimeout(async () => {
-          const newSlots = [...parkData.slots];
-          const fullIdx = newSlots.findLastIndex(s => s === true);
-          if (fullIdx !== -1) {
-            newSlots[fullIdx] = false;
-            const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "parking", "status");
-            await window.FB.setDoc(ref, { slots: newSlots, occupied: parkData.occupied - 1 }, { merge: true });
-          }
-          setTimeout(async () => { await togglePark("exitGateOpen", false); setIsSimulating(false); }, 1500);
-        }, 1500);
+      // ZAMAN MAKİNESİ (Sunum Simülasyonu İçin: +30 DK)
+      const fastForwardTime = async () => {
+         const newSlots = parkData.slots.map(slot => {
+            if (slot.occupied && slot.entryTimestamp) {
+               return { ...slot, entryTimestamp: slot.entryTimestamp - 1800000 }; // 30 Dk = 1800000 ms
+            }
+            return slot;
+         });
+         await updateDB({ slots: newSlots });
+         showTempMsg("⏳ Sunum Modu: Tüm araçların süresine +30 Dakika eklendi!");
+         setNow(Date.now());
       };
 
-      const handleManualEntryGateToggle = async () => {
+      // ARAÇ YERİNDEN AYRILIP ÇIKIŞA GİDİYOR
+      const handleCarLeavesSlot = async (index) => {
         if (isSimulating) return;
-        if (!parkData.entryGateOpen && parkData.occupied >= 6) {
-          setErrorMsg("⚠️ İçeride hiç yer yok! Giriş bariyeri açılamaz.");
-          setTimeout(() => setErrorMsg(""), 4000);
-          return;
+        if (parkData.carAtExit) {
+           showTempMsg("⚠️ Şu an çıkış bariyerinde başka bir araç bekliyor. Lütfen sıranızı bekleyin!", true);
+           return;
         }
-        await togglePark("entryGateOpen", !parkData.entryGateOpen);
+
+        setIsSimulating(true);
+        
+        const leavingCar = parkData.slots[index];
+        const feeDetails = calculateFee(leavingCar.entryTimestamp);
+        
+        const newSlots = [...parkData.slots];
+        newSlots[index] = { occupied: false, time: "", entryTimestamp: null };
+        
+        await updateDB({
+           slots: newSlots,
+           carAtExit: true,
+           carOrigin: index,
+           carPaid: false,
+           carFeeText: feeDetails.feeText,
+           carDurationText: feeDetails.text
+        });
+
+        setIsSimulating(false);
       };
 
-      const handleManualExitGateToggle = async () => {
+      // ÖDEME VE ÇAĞRI MERKEZİ KONTROLLERİ
+      const startCallCenter = () => {
+         setPaymentStep(2);
+         setCallStatusText("Çağrı Merkezi aranıyor...");
+         
+         setTimeout(() => setCallStatusText("Müşteri temsilcisine bağlanıldı... Durumunuz inceleniyor."), 2500);
+         setTimeout(() => setCallStatusText("Sistem kontrolü yapıldı, sorununuz çözüldü! Ödemeye yönlendiriliyorsunuz..."), 6500);
+         setTimeout(() => {
+            setCallStatusText("");
+            setPaymentStep(1); // Geri ödeme ekranına at
+         }, 10000);
+      };
+
+      const completePayment = async () => {
+        setPaymentStep(0);
+        await updateDB({ carPaid: true });
+        showTempMsg("✅ Ödeme başarıyla alındı. Çıkış yapabilirsiniz.");
+      };
+
+      const handleExitGateOpen = async () => {
         if (isSimulating) return;
-        await togglePark("exitGateOpen", !parkData.exitGateOpen);
+        setIsSimulating(true);
+
+        await updateDB({ exitGateOpen: true });
+        showTempMsg("🚗 Araç çıkış yapıyor. Lütfen bekleyiniz...");
+        
+        setTimeout(async () => {
+           await updateDB({
+              carAtExit: false,
+              carOrigin: -1,
+              carPaid: false,
+              carFeeText: "",
+              carDurationText: "",
+              exitGateOpen: false
+           });
+           showTempMsg("✅ Araç çıkışı tamamlandı. Bariyer kapandı.");
+           setIsSimulating(false);
+        }, 8000); 
       };
 
       function login() {
@@ -216,7 +376,7 @@
           setLoggedIn(true);
           setErrorMsg("");
         } else {
-          setErrorMsg("Hatalı PIN! Akıllı Otopark şifresi: 2222");
+          showTempMsg("Hatalı PIN! Akıllı Otopark şifresi: 2222", true);
         }
       }
 
@@ -233,14 +393,21 @@
               </div>
               <input type="password" maxLength="4" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && login()} placeholder="OTOPARK PIN (2222)" className="w-full rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-center text-xl tracking-[0.2em] text-slate-900 outline-none focus:border-blue-500 mb-4 font-bold" />
               <button onClick={login} className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-4 font-bold uppercase tracking-wider btn-touch shadow-lg shadow-blue-600/20">Giriş Yap</button>
-              {errorMsg && <div className="mt-4 p-3 rounded-lg bg-red-50 text-red-500 text-center text-sm font-medium">{errorMsg}</div>}
             </div>
+            
+            {(errorMsg || successMsg) && (
+              <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-[fadeIn_0.3s_ease-out]">
+                 <div className={`px-6 py-3 rounded-full text-sm font-bold shadow-2xl ${errorMsg ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                    {errorMsg || successMsg}
+                 </div>
+              </div>
+            )}
           </div>
         );
       }
 
       return (
-        <div className="min-h-screen pb-12">
+        <div className="min-h-screen pb-12 relative">
           <header className="px-6 py-5 glass-panel sticky top-0 z-50 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-lg shadow-lg">🅿️</div>
@@ -252,64 +419,217 @@
             <button onClick={() => { setLoggedIn(false); setPin(""); }} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-bold btn-touch hover:bg-white/10">ÇIKIŞ</button>
           </header>
 
-          <main className="max-w-3xl mx-auto px-4 py-6 animate-[fadeIn_0.3s_ease-out]">
+          <main className="max-w-4xl mx-auto px-4 py-6 animate-[fadeIn_0.3s_ease-out]">
+            
+            {(errorMsg || successMsg) && (
+               <div className={`max-w-md mx-auto mb-6 p-4 rounded-xl border text-center text-sm font-bold shadow-lg animate-[fadeIn_0.2s_ease-out] ${errorMsg ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
+                 {errorMsg || successMsg}
+               </div>
+            )}
+
             <ParkingVisualizer data={parkData} />
-            {errorMsg && <div className="max-w-md mx-auto mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-center text-sm font-bold shadow-lg animate-[fadeIn_0.2s_ease-out]">{errorMsg}</div>}
 
-            <div className="max-w-md mx-auto glass-panel rounded-[24px] p-5 mb-6 border border-white/5 shadow-xl">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center justify-center gap-2"><span>🎬</span> Sunum Simülasyonu</h3>
-              <div className="flex gap-4">
-                <button onClick={simulateParkEntry} disabled={isSimulating} className={`flex-1 bg-indigo-600/20 border border-indigo-500/50 text-indigo-300 p-3 rounded-xl font-bold flex flex-col items-center justify-center gap-1 btn-touch transition-all ${isSimulating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-600/30'}`}><span className="text-2xl">🚗</span><span className="text-[10px] uppercase tracking-widest">Araç Gönder</span></button>
-                <button onClick={simulateParkExit} disabled={isSimulating} className={`flex-1 bg-slate-700/50 border border-slate-600 text-slate-300 p-3 rounded-xl font-bold flex flex-col items-center justify-center gap-1 btn-touch transition-all ${isSimulating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-700'}`}><span className="text-2xl">🚙</span><span className="text-[10px] uppercase tracking-widest">Araç Çıkar</span></button>
-              </div>
+            {/* OTONOM GİRİŞ VE ÇIKIŞ/ÖDEME KONTROLLERİ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+               
+               {/* Giriş Kontrol Kiosku */}
+               <div className="glass-panel p-6 rounded-[24px] border border-white/5 shadow-xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 z-30">
+                     <button onClick={fastForwardTime} className="bg-white/5 hover:bg-white/10 text-[8px] text-white/50 px-2 py-1 rounded border border-white/10 btn-touch transition-colors" title="Sunumda süreyi test etmek için">
+                        +30 Dk Sar
+                     </button>
+                  </div>
+                  
+                  <div className="text-4xl mb-3">📡</div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">Giriş Sensörü</h3>
+                  <p className="text-[10px] text-slate-400 mb-5 w-3/4">Dışarıdan gelen araçları algılar. Boş yer varsa bariyeri açarak aracı otomatik yönlendirir.</p>
+                  
+                  <button 
+                    onClick={handleCarArrives} 
+                    disabled={isSimulating || parkData.carAtEntry} 
+                    className={`w-full py-4 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all btn-touch ${parkData.carAtEntry ? 'bg-indigo-600/50 text-white cursor-not-allowed' : 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:bg-indigo-500'}`}
+                  >
+                    <span>🚗</span> {parkData.carAtEntry ? "Araç İşleniyor..." : "Araç Geldi (Tetikle)"}
+                  </button>
+               </div>
+
+               {/* Çıkış ve Ödeme Kiosku */}
+               <div className={`glass-panel p-6 rounded-[24px] border shadow-xl flex flex-col items-center justify-center text-center transition-all duration-500 ${parkData.carAtExit ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5'}`}>
+                  <div className="text-4xl mb-3">💳</div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest mb-1">Ödeme & Çıkış Gişesi</h3>
+                  
+                  {!parkData.carAtExit ? (
+                     <p className="text-[10px] text-slate-500 mb-5 w-3/4">Şu an çıkışta bekleyen araç bulunmuyor. Sistem beklemede.</p>
+                  ) : (
+                     <div className="w-full">
+                        <div className="text-[11px] font-bold text-amber-400 bg-amber-500/10 py-3 px-4 rounded-lg mb-4 border border-amber-500/20 flex flex-col gap-1">
+                           <div><span className="text-white">P{parkData.carOrigin + 1}</span> Çıkış Yapıyor</div>
+                           <div className="text-sm text-white">Süre: <span className="text-amber-400">{parkData.carDurationText}</span></div>
+                        </div>
+                        
+                        {!parkData.carPaid && parkData.carFeeText !== "ÜCRETSİZ" ? (
+                           <button 
+                             onClick={() => setPaymentStep(1)} 
+                             className="w-full py-4 rounded-xl font-black uppercase tracking-widest bg-amber-500 text-slate-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:bg-amber-400 transition-all btn-touch"
+                           >
+                             💵 Kiosktan Ödeme Yap
+                           </button>
+                        ) : (
+                           <button 
+                             onClick={handleExitGateOpen} 
+                             disabled={isSimulating}
+                             className={`w-full py-4 rounded-xl font-black uppercase tracking-widest flex justify-center items-center gap-2 transition-all btn-touch ${isSimulating ? 'bg-emerald-600/50 text-white cursor-not-allowed' : 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:bg-emerald-400'}`}
+                           >
+                             <span>✅</span> {isSimulating ? "Bariyer Açık..." : "Çıkış Yap (Bariyeri Aç)"}
+                           </button>
+                        )}
+                     </div>
+                  )}
+               </div>
+
             </div>
 
-            <div className="max-w-md mx-auto grid grid-cols-2 gap-4 mb-6">
-              <button onClick={handleManualEntryGateToggle} disabled={isSimulating} className={`rounded-2xl p-4 flex flex-col items-center justify-center gap-3 border btn-touch transition-all shadow-lg ${parkData.entryGateOpen ? "bg-emerald-900/40 border-emerald-500/50" : "bg-red-900/40 border-red-500/50"} ${isSimulating ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                <div className="text-3xl">🚧</div>
-                <div className="text-center">
-                  <div className={`text-xs font-black uppercase tracking-wider ${parkData.entryGateOpen ? 'text-emerald-400' : 'text-red-400'}`}>Giriş Bariyeri</div>
-                  <div className="text-[9px] text-white/50 mt-1">{isSimulating ? "İşlem Bekleniyor..." : parkData.entryGateOpen ? "Açık - Serbest" : "Kapalı - Dur"}</div>
-                </div>
-                <div className={`w-10 h-5 rounded-full p-1 transition-all ${parkData.entryGateOpen ? "bg-emerald-500" : "bg-red-500"}`}><div className={`w-3 h-3 bg-white rounded-full transition-all ${parkData.entryGateOpen ? "translate-x-5" : "translate-x-0"}`}></div></div>
-              </button>
-              <button onClick={handleManualExitGateToggle} disabled={isSimulating} className={`rounded-2xl p-4 flex flex-col items-center justify-center gap-3 border btn-touch transition-all shadow-lg ${parkData.exitGateOpen ? "bg-emerald-900/40 border-emerald-500/50" : "bg-red-900/40 border-red-500/50"} ${isSimulating ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                <div className="text-3xl">🚧</div>
-                <div className="text-center">
-                  <div className={`text-xs font-black uppercase tracking-wider ${parkData.exitGateOpen ? 'text-emerald-400' : 'text-red-400'}`}>Çıkış Bariyeri</div>
-                  <div className="text-[9px] text-white/50 mt-1">{isSimulating ? "İşlem Bekleniyor..." : parkData.exitGateOpen ? "Açık - Serbest" : "Kapalı - Dur"}</div>
-                </div>
-                <div className={`w-10 h-5 rounded-full p-1 transition-all ${parkData.exitGateOpen ? "bg-emerald-500" : "bg-red-500"}`}><div className={`w-3 h-3 bg-white rounded-full transition-all ${parkData.exitGateOpen ? "translate-x-5" : "translate-x-0"}`}></div></div>
-              </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+               {/* Kapasite Durumu */}
+               <div className="col-span-1 md:col-span-2 glass-panel rounded-[24px] p-6 text-center border border-white/5 shadow-xl relative overflow-hidden flex flex-col justify-center">
+                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-cyan-500"></div>
+                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Anlık Kapasite Durumu</h3>
+                 <div className="text-6xl mb-2 font-black flex items-center justify-center gap-2">
+                   <span className={parkData.occupied >= 6 ? "text-red-400" : "text-cyan-400"}>{6 - parkData.occupied}</span>
+                   <span className="text-slate-600 text-4xl">/</span><span className="text-slate-500 text-5xl">6</span>
+                 </div>
+                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Müsait Park Yeri</div>
+               </div>
+
+               {/* Otopark Tarifesi Kartı */}
+               <div className="col-span-1 glass-panel rounded-[24px] p-5 border border-white/5 shadow-xl bg-slate-800/80">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-white/10 pb-2 flex items-center gap-2"><span>📋</span> Otopark Tarifesi</h3>
+                  <div className="flex flex-col gap-2 text-[9px] font-bold text-white/80">
+                     <div className="flex justify-between items-center"><span className="opacity-70">0-25 DAKİKA</span><span className="text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">ÜCRETSİZ</span></div>
+                     <div className="flex justify-between items-center"><span className="opacity-70">25-60 DAKİKA</span><span>9.00 TL</span></div>
+                     <div className="flex justify-between items-center pt-1 border-t border-white/5"><span className="opacity-70 text-[8px]">12 SAATE KADAR (İLAVE/SAAT)</span><span className="text-amber-400">+1.50 TL</span></div>
+                     <div className="flex justify-between items-center"><span className="opacity-70 text-[8px]">12-24 SAAT ARASI (İLAVE/SAAT)</span><span className="text-amber-400">+1.00 TL</span></div>
+                     <div className="flex justify-between items-center"><span className="opacity-70 text-[8px]">24 SAAT ÜSTÜ (İLAVE/SAAT)</span><span className="text-amber-400">+1.00 TL</span></div>
+                  </div>
+               </div>
             </div>
 
-            <div className="max-w-md mx-auto glass-panel rounded-[24px] p-6 text-center mb-6 border border-white/5 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-cyan-500"></div>
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Anlık Kapasite Durumu</h3>
-              <div className="text-6xl mb-2 font-black flex items-center justify-center gap-2">
-                <span className={parkData.occupied >= 6 ? "text-red-400" : "text-cyan-400"}>{6 - parkData.occupied}</span>
-                <span className="text-slate-600 text-4xl">/</span><span className="text-slate-500 text-5xl">6</span>
-              </div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Müsait Park Yeri</div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 px-2"><span>🅿️</span> Park Alanları (IR Sensörler)</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
               {[0, 1, 2, 3, 4, 5].map((index) => {
-                const isFull = parkData.slots[index];
+                const slot = parkData.slots[index];
+                const feeDetails = slot.occupied ? calculateFee(slot.entryTimestamp) : null;
+
                 return (
-                  <div key={index} className={`relative rounded-2xl p-6 border flex flex-col items-center justify-center gap-3 transition-colors shadow-lg ${isFull ? "bg-slate-800 border-red-500/30" : "bg-slate-800/50 border-emerald-500/30"}`}>
-                    <div className="absolute top-3 left-3 text-xs font-black text-slate-500 opacity-50">P{index + 1}</div>
-                    <div className="mt-2 mb-4">
-                       {isFull ? <div className="text-5xl animate-[fadeIn_0.4s_ease-out]">🚗</div> : <div className="w-12 h-12 rounded-xl bg-slate-700/50 flex items-center justify-center text-2xl font-black text-slate-800 border border-slate-600/50">P</div>}
+                  <div key={index} className={`relative rounded-[20px] p-5 border flex flex-col items-center justify-center transition-colors shadow-lg ${slot.occupied ? "bg-slate-800 border-red-500/30" : "bg-slate-800/50 border-emerald-500/30"}`}>
+                    <div className="absolute top-4 left-4 text-sm font-black text-slate-500 opacity-50">P{index + 1}</div>
+                    
+                    <div className="mt-3 mb-2 flex flex-col items-center w-full">
+                       {slot.occupied ? (
+                         <>
+                           <div className="text-5xl animate-[fadeIn_0.4s_ease-out] drop-shadow-lg mb-3">🚗</div>
+                           <div className="flex flex-col gap-1 w-full text-center">
+                             <div className="text-[9px] font-bold text-slate-300 bg-slate-900 px-2 py-1 rounded border border-white/10 uppercase tracking-widest">Giriş: {slot.time}</div>
+                             <div className="text-[10px] font-black text-amber-400 bg-amber-500/10 px-2 py-1.5 rounded border border-amber-500/20 flex justify-between items-center px-3">
+                                <span>⏱️ {feeDetails.text}</span>
+                                <span>{feeDetails.feeText}</span>
+                             </div>
+                           </div>
+                         </>
+                       ) : (
+                         <div className="w-14 h-14 rounded-2xl bg-slate-700/50 flex items-center justify-center text-3xl font-black text-slate-800 border border-slate-600/50 mb-6 mt-2">P</div>
+                       )}
                     </div>
-                    <div className={`text-[10px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full border ${isFull ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}>
-                      {isFull ? "Dolu" : "Boş"}
+                    
+                    <div className="w-full mt-auto pt-2">
+                       {slot.occupied ? (
+                          <button 
+                            onClick={() => handleCarLeavesSlot(index)} 
+                            disabled={isSimulating || parkData.carAtExit}
+                            className="w-full py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all btn-touch"
+                          >
+                            Çıkışa Yönel ➡️
+                          </button>
+                       ) : (
+                          <div className={`text-[10px] font-bold tracking-widest uppercase py-2.5 rounded-lg border text-center bg-emerald-500/10 border-emerald-500/30 text-emerald-400`}>
+                            Boş Alan
+                          </div>
+                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
           </main>
+
+          {/* DİNAMİK ÖDEME & ÇAĞRI MERKEZİ MODALI */}
+          {paymentStep > 0 && (
+             <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-[fadeIn_0.3s_ease-out]">
+                
+                {/* 1. ADIM: FATURA / GİŞE EKRANI */}
+                {paymentStep === 1 && (
+                  <div className="bg-slate-800 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl relative">
+                     <div className="h-2 bg-gradient-to-r from-amber-400 to-orange-500"></div>
+                     <button onClick={() => setPaymentStep(0)} className="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
+                     
+                     <div className="p-8 text-center flex flex-col items-center">
+                        <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center text-3xl mb-4 border border-white/5">🧾</div>
+                        <h2 className="text-xl font-black text-white mb-6 uppercase tracking-wide border-b border-white/10 pb-4 w-full">Otopark Ödeme Gişesi</h2>
+                        
+                        <div className="w-full bg-slate-900/50 rounded-2xl p-5 mb-6 border border-white/5 text-left">
+                           <div className="flex justify-between items-center mb-3">
+                              <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">Araç No</span>
+                              <span className="text-sm text-white font-black">P{parkData.carOrigin + 1}</span>
+                           </div>
+                           <div className="flex justify-between items-center mb-3">
+                              <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">Toplam Süre</span>
+                              <span className="text-sm text-white font-black">{parkData.carDurationText}</span>
+                           </div>
+                           <div className="flex justify-between items-center pt-3 border-t border-white/10 mt-2">
+                              <span className="text-sm text-amber-400 uppercase tracking-widest font-black">Toplam Tutar</span>
+                              <span className="text-2xl text-amber-400 font-black">{parkData.carFeeText}</span>
+                           </div>
+                        </div>
+
+                        <div className="text-[9px] text-slate-500 font-bold mb-6">Tarife: 25 Dk ücretsiz, ilk saat 9 TL. Saatlik ilave +1.50 TL.</div>
+
+                        <div className="flex flex-col gap-3 w-full">
+                           <button onClick={() => setPaymentStep(3)} className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest shadow-lg transition-all btn-touch">💳 Ödemeyi Tamamla</button>
+                           <button onClick={startCallCenter} className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold uppercase tracking-widest transition-all border border-slate-600 btn-touch flex items-center justify-center gap-2"><span>🎧</span> Çağrı Merkezi (Destek)</button>
+                        </div>
+                     </div>
+                  </div>
+                )}
+
+                {/* 2. ADIM: ÇAĞRI MERKEZİ (SİMÜLASYON) */}
+                {paymentStep === 2 && (
+                  <div className="bg-slate-800 border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative text-center p-10 flex flex-col items-center">
+                     <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center text-5xl mb-6 shadow-[0_0_40px_rgba(59,130,246,0.3)] animate-pulse-fast">🎧</div>
+                     <h2 className="text-lg font-black text-white mb-4 uppercase tracking-wide">Çağrı Merkezi</h2>
+                     <p className="text-cyan-400 text-sm font-bold min-h-[40px] leading-relaxed transition-all">
+                       {callStatusText}
+                     </p>
+                  </div>
+                )}
+
+                {/* 3. ADIM: BAŞARILI */}
+                {paymentStep === 3 && (
+                  <div className="bg-slate-800 border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl relative p-8 text-center flex flex-col items-center">
+                     <div className="h-2 absolute top-0 left-0 w-full bg-gradient-to-r from-emerald-400 to-emerald-600"></div>
+                     <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center text-5xl mb-6 shadow-[0_0_30px_rgba(16,185,129,0.3)]">✅</div>
+                     <h2 className="text-xl font-black text-white mb-4 uppercase tracking-wide">Ödeme Başarılı</h2>
+                     <p className="text-slate-300 text-sm mb-8 leading-relaxed font-medium">
+                       Bu seferlik hesaplar <span className="text-emerald-400 font-bold">Mucit Akademisi</span>'nden!<br/><br/>Sonraki seferlerde görüşmek üzere.
+                     </p>
+                     <button onClick={completePayment} className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black uppercase tracking-widest shadow-lg hover:opacity-90 btn-touch transition-all">
+                       Geçiş İçin Tamamla
+                     </button>
+                  </div>
+                )}
+
+             </div>
+          )}
+
         </div>
       );
     }
