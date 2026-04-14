@@ -22,9 +22,9 @@ const int IR_PARK[6] = {13, 14, 25, 26, 27, 34}; // P1 - P6
 // --- STANDART SERVO (SG90) AYARLARI ---
 #define SERVO_MIN_US       500
 #define SERVO_MAX_US       2400
-#define SERVO_OPEN_ANGLE   45
-#define SERVO_CLOSE_ANGLE  179
-#define SERVO_HOLD_MS      1000
+#define SERVO_OPEN_ANGLE   10
+#define SERVO_CLOSE_ANGLE  170
+#define SERVO_HOLD_MS      4000
 
 // --- SENSÖR FİLTRE AYARLARI ---
 #define GIRIS_DEBOUNCE_MS  150
