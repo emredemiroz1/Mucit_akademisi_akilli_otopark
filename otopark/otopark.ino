@@ -19,11 +19,11 @@ const int IR_PARK[6] = {13, 14, 25, 26, 27, 34}; // P1 - P6
 #define SERVO_GIRIS_PIN 18
 #define SERVO_CIKIS_PIN 19
 
-// --- MG90S SERVO AYARLARI ---
+// --- STANDART SERVO (SG90) AYARLARI ---
 #define SERVO_MIN_US       500
 #define SERVO_MAX_US       2400
-#define SERVO_OPEN_ANGLE   120  // İstediğiniz gibi 120 dereceye ayarlandı
-#define SERVO_CLOSE_ANGLE  0
+#define SERVO_OPEN_ANGLE   120  // Açık bariyer açısı
+#define SERVO_CLOSE_ANGLE  0    // Kapalı bariyer açısı
 #define SERVO_HOLD_MS      3500 // Araç geçişi için bariyerin açık kalma süresi
 
 FirebaseData fbdoRead, fbdoWrite;
@@ -61,25 +61,28 @@ int getOccupiedCount() {
 }
 
 void updateFirestoreBool(String key, bool value) {
-  // Sadece belirtilen key'i (örn: p3_occupied) günceller, saati silmez!
   String json = "{\"fields\":{\"" + key + "\":{\"booleanValue\":" + (value ? "true" : "false") + "}}}";
   Firebase.Firestore.patchDocument(&fbdoWrite, FIREBASE_PROJECT_ID, "", docPath.c_str(), json.c_str(), key.c_str());
 }
 
+// --- STANDART SERVO AÇMA FONKSİYONU ---
 void openGate(Servo &servo, int pin, bool &isOpenFlag, unsigned long &timer) {
   if(!servo.attached()) {
     servo.setPeriodHertz(50);
     servo.attach(pin, SERVO_MIN_US, SERVO_MAX_US);
   }
-  servo.write(SERVO_OPEN_ANGLE);
+  
+  servo.write(SERVO_OPEN_ANGLE); // Bariyeri havaya kaldır
+  
   isOpenFlag = true;
   timer = millis();
 }
 
+// --- STANDART SERVO KAPATMA FONKSİYONU ---
 void closeGateIfTimeout(Servo &servo, bool &isOpenFlag, unsigned long timer, String firebaseUrl) {
   if (isOpenFlag && (millis() - timer > SERVO_HOLD_MS)) {
     servo.write(SERVO_CLOSE_ANGLE);
-    delay(500); 
+    delay(1000); // DÜZELTME: Servonun 175 dereceye tam inebilmesi için 1 saniye beklendi
     servo.detach(); 
     isOpenFlag = false;
     updateFirestoreBool(firebaseUrl, false);
@@ -102,7 +105,7 @@ void setup() {
   cikisServosu.attach(SERVO_CIKIS_PIN, SERVO_MIN_US, SERVO_MAX_US);
   cikisServosu.write(SERVO_CLOSE_ANGLE);
   
-  delay(1000); 
+  delay(1000); // DÜZELTME: Açılışta bariyerlerin 175 dereceye tam inebilmesi için 1 saniye beklendi
   girisServosu.detach();
   cikisServosu.detach();
 
@@ -189,7 +192,7 @@ void loop() {
       updateFirestoreBool("carPaid", false); // Diğer aracın kaçmaması için ödemeyi sıfırla
       carPaid = false;
       exitDetectTime = 0;
-      Serial.println("Odeme alinmis. Arac cikiyor (120 derece acildi).");
+      Serial.println("Odeme alinmis. Arac cikiyor. Bariyer acildi.");
     }
   } else {
     exitDetectTime = 0;
