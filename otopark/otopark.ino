@@ -3,8 +3,8 @@
 #include <ESP32Servo.h>
 
 // --- WI-FI AYARLARI ---
-#define WIFI_SSID "FiberHGW_ZT2K3R_2.4GHz"
-#define WIFI_PASSWORD "cjsgsrDtyc"
+#define WIFI_SSID "Esptestwifi"
+#define WIFI_PASSWORD "12345678"
 
 // --- FIREBASE AYARLARI ---
 #define API_KEY "AIzaSyAR1cyO7pFPM5RLvO308uAcSyf5HaqAizM"
@@ -22,8 +22,8 @@ const int IR_PARK[6] = {13, 14, 25, 26, 27, 34}; // P1 - P6
 // --- STANDART SERVO (SG90) AYARLARI ---
 #define SERVO_MIN_US       500
 #define SERVO_MAX_US       2400
-#define SERVO_OPEN_ANGLE   45 // Açık bariyer açısı
-#define SERVO_CLOSE_ANGLE  179    // Kapalı bariyer açısı
+#define SERVO_OPEN_ANGLE   120  // Açık bariyer açısı
+#define SERVO_CLOSE_ANGLE  0    // Kapalı bariyer açısı
 #define SERVO_HOLD_MS      3500 // Araç geçişi için bariyerin açık kalma süresi
 
 FirebaseData fbdoRead, fbdoWrite;
@@ -67,11 +67,6 @@ void updateFirestoreBool(String key, bool value) {
 
 // --- STANDART SERVO AÇMA FONKSİYONU ---
 void openGate(Servo &servo, int pin, bool &isOpenFlag, unsigned long &timer) {
-  if(!servo.attached()) {
-    servo.setPeriodHertz(50);
-    servo.attach(pin, SERVO_MIN_US, SERVO_MAX_US);
-  }
-  
   servo.write(SERVO_OPEN_ANGLE); // Bariyeri havaya kaldır
   
   isOpenFlag = true;
@@ -82,8 +77,7 @@ void openGate(Servo &servo, int pin, bool &isOpenFlag, unsigned long &timer) {
 void closeGateIfTimeout(Servo &servo, bool &isOpenFlag, unsigned long timer, String firebaseUrl) {
   if (isOpenFlag && (millis() - timer > SERVO_HOLD_MS)) {
     servo.write(SERVO_CLOSE_ANGLE);
-    delay(2000); // DÜZELTME: Servonun 175 dereceye tam inebilmesi için 1 saniye beklendi
-    servo.detach(); 
+    // DÜZELTME: detach() KALDIRILDI! Motor gücü kesilmeyecek, kapıyı taş gibi kilitli tutacak.
     isOpenFlag = false;
     updateFirestoreBool(firebaseUrl, false);
     Serial.println("Bariyer kapatildi.");
@@ -97,6 +91,12 @@ void setup() {
   pinMode(IR_CIKIS, INPUT);
   for(int i=0; i<6; i++) pinMode(IR_PARK[i], INPUT);
 
+  // DÜZELTME: ESP32 Servo zamanlayıcıları tahsis edildi (titremeyi ve düşmeyi önler)
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+
   girisServosu.setPeriodHertz(50);
   girisServosu.attach(SERVO_GIRIS_PIN, SERVO_MIN_US, SERVO_MAX_US);
   girisServosu.write(SERVO_CLOSE_ANGLE);
@@ -105,10 +105,8 @@ void setup() {
   cikisServosu.attach(SERVO_CIKIS_PIN, SERVO_MIN_US, SERVO_MAX_US);
   cikisServosu.write(SERVO_CLOSE_ANGLE);
   
-  delay(1000); // DÜZELTME: Açılışta bariyerlerin 175 dereceye tam inebilmesi için 1 saniye beklendi
-  girisServosu.detach();
-  cikisServosu.detach();
-
+  // DÜZELTME: detach() KOMUTLARI BURADAN DA KALDIRILDI!
+  
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
   Serial.println("\nWiFi Baglandi!");

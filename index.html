@@ -77,13 +77,16 @@
                <div className="absolute left-0 right-0 top-1/2 h-px bg-white/10 border-dashed"></div>
                {[0, 1, 2, 3, 4, 5].map((slotIdx) => {
                  const slot = data.slots[slotIdx];
+                 const isOccupiedOrWaiting = slot.status === 'PARKED' || slot.status === 'AT_EXIT';
                  return (
                    <div key={slotIdx} className="relative flex flex-col items-center justify-center h-full w-full">
                      <div className="absolute top-2 left-2 text-[9px] font-black text-slate-600 tracking-widest">P{slotIdx+1}</div>
-                     {slot.occupied ? (
+                     {isOccupiedOrWaiting ? (
                        <div className="flex flex-col items-center animate-[fadeIn_0.3s_ease-out]">
-                         <div className="text-3xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">🚗</div>
-                         <div className="text-[8px] text-cyan-400 font-bold tracking-widest mt-1 bg-cyan-500/10 px-1.5 py-0.5 rounded">GİRİŞ: {slot.time}</div>
+                         <div className={`text-3xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] ${slot.status === 'AT_EXIT' ? 'opacity-30' : ''}`}>🚗</div>
+                         <div className={`text-[8px] font-bold tracking-widest mt-1 px-1.5 py-0.5 rounded ${slot.status === 'AT_EXIT' ? 'text-red-400 bg-red-500/10' : 'text-cyan-400 bg-cyan-500/10'}`}>
+                           {slot.status === 'AT_EXIT' ? 'ÇIKIŞTA' : `GİRİŞ: ${slot.time}`}
+                         </div>
                        </div>
                      ) : (
                        <div className="text-3xl font-black text-emerald-500/10 select-none">P</div>
@@ -138,8 +141,8 @@
       
       const [now, setNow] = useState(Date.now()); // Canlı dakika hesabı için
 
-      // Firebase sensör takibi için geçici hafıza
-      const prevSlotsRef = useRef(Array(6).fill({ occupied: false, time: "", entryTimestamp: null }));
+      // Firebase sensör takibi için geçici hafıza (status eklendi)
+      const prevSlotsRef = useRef(Array(6).fill({ occupied: false, time: "", entryTimestamp: null, status: 'EMPTY' }));
 
       useEffect(() => {
          const interval = setInterval(() => { setNow(Date.now()); }, 10000); 
@@ -148,7 +151,7 @@
 
       const [parkData, setParkData] = useState({ 
         occupied: 0, 
-        slots: Array(6).fill({ occupied: false, time: "", entryTimestamp: null }), 
+        slots: Array(6).fill({ occupied: false, time: "", entryTimestamp: null, status: 'EMPTY' }), 
         entryGateOpen: false, 
         exitGateOpen: false,
         carOrigin: -1, 
@@ -195,23 +198,33 @@
                        // Sensör YENİ araç algıladı, hemen saati kaydet!
                        const dateObj = new Date();
                        const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
-                       newSlots[i] = { occupied: true, time: timeStr, entryTimestamp: dateObj.getTime() };
+                       newSlots[i] = { occupied: true, time: timeStr, entryTimestamp: dateObj.getTime(), status: 'PARKED' };
                        
                        dbUpdates[`p${i}_timestamp`] = dateObj.getTime();
                        dbUpdates[`p${i}_time`] = timeStr;
                        needsDbUpdate = true;
                     } else {
                        // Zaten önceden park edilmiş ve saati biliniyor
-                       newSlots[i] = { occupied: true, time: dbTimeStr, entryTimestamp: dbTimestamp };
+                       newSlots[i] = { occupied: true, time: dbTimeStr, entryTimestamp: dbTimestamp, status: 'PARKED' };
                     }
                     activeCount++;
                  } else {
-                    // Fiziksel olarak araç YOK, ekrandan siliyoruz!
-                    newSlots[i] = { occupied: false, time: "", entryTimestamp: null };
-                    if (dbTimestamp) {
-                       dbUpdates[`p${i}_timestamp`] = 0; 
-                       dbUpdates[`p${i}_time`] = "";
-                       needsDbUpdate = true;
+                    // Fiziksel olarak araç YOK
+                    if (dbTimestamp > 0) {
+                       // DÜZELTME: Eğer ödeme yapıldıysa veya çıkış bariyeri açıksa, sil!
+                       if (getBool("carPaid") || getBool("exitGateOpen")) {
+                          newSlots[i] = { occupied: false, time: "", entryTimestamp: null, status: 'EMPTY' };
+                          dbUpdates[`p${i}_timestamp`] = 0; 
+                          dbUpdates[`p${i}_time`] = "";
+                          needsDbUpdate = true;
+                       } else {
+                          // DÜZELTME: Araç ödeme yapmadan çıkmış! Gişede sıkıştı. SİLMİYORUZ!
+                          newSlots[i] = { occupied: true, time: dbTimeStr, entryTimestamp: dbTimestamp, status: 'AT_EXIT' };
+                          activeCount++;
+                       }
+                    } else {
+                       // Zaten boştu, boş kalmaya devam ediyor
+                       newSlots[i] = { occupied: false, time: "", entryTimestamp: null, status: 'EMPTY' };
                     }
                  }
               }
@@ -442,19 +455,23 @@
             <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
               {[0, 1, 2, 3, 4, 5].map((index) => {
                 const slot = parkData.slots[index];
-                const feeDetails = slot.occupied ? calculateFee(slot.entryTimestamp) : null;
+                const isOccupiedOrWaiting = slot.status === 'PARKED' || slot.status === 'AT_EXIT';
+                const feeDetails = isOccupiedOrWaiting ? calculateFee(slot.entryTimestamp) : null;
 
                 return (
-                  <div key={index} className={`relative rounded-[20px] p-5 border flex flex-col items-center justify-center transition-colors shadow-lg ${slot.occupied ? "bg-slate-800 border-amber-500/30" : "bg-slate-800/50 border-emerald-500/30"}`}>
+                  <div key={index} className={`relative rounded-[20px] p-5 border flex flex-col items-center justify-center transition-colors shadow-lg ${isOccupiedOrWaiting ? "bg-slate-800 border-amber-500/30" : "bg-slate-800/50 border-emerald-500/30"}`}>
                     <div className="absolute top-4 left-4 text-sm font-black text-slate-500 opacity-50">P{index + 1}</div>
                     
                     <div className="mt-3 mb-2 flex flex-col items-center w-full">
-                       {slot.occupied ? (
+                       {isOccupiedOrWaiting ? (
                          <>
-                           <div className="text-5xl animate-[fadeIn_0.4s_ease-out] drop-shadow-lg mb-3">🚗</div>
+                           <div className={`text-5xl drop-shadow-lg mb-3 ${slot.status === 'AT_EXIT' ? 'animate-bounce opacity-50' : 'animate-[fadeIn_0.4s_ease-out]'}`}>🚗</div>
                            <div className="flex flex-col gap-1 w-full text-center">
+                             {slot.status === 'AT_EXIT' && (
+                                 <div className="text-[9px] font-black text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/30 animate-pulse mb-1">⚠️ GİŞEDE BEKLİYOR</div>
+                             )}
                              <div className="text-[9px] font-bold text-slate-300 bg-slate-900 px-2 py-1 rounded border border-white/10 uppercase tracking-widest">Giriş: {slot.time}</div>
-                             <div className="text-[10px] font-black text-amber-400 bg-amber-500/10 px-2 py-1.5 rounded border border-amber-500/20 flex justify-between items-center px-3">
+                             <div className="text-[10px] font-black text-amber-400 bg-amber-500/10 px-2 py-1.5 rounded border border-amber-500/20 flex justify-between items-center px-3 mt-1">
                                 <span>⏱️ {feeDetails.text}</span>
                                 <span>{feeDetails.feeText}</span>
                              </div>
@@ -466,12 +483,12 @@
                     </div>
                     
                     <div className="w-full mt-auto pt-2">
-                       {slot.occupied ? (
+                       {isOccupiedOrWaiting ? (
                           <button 
                             onClick={() => handlePaymentRequest(index)} 
-                            className="w-full py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-500 text-slate-900 border border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:bg-amber-400 transition-all btn-touch"
+                            className={`w-full py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-all btn-touch ${slot.status === 'AT_EXIT' ? 'bg-red-500 text-white border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.4)] hover:bg-red-400' : 'bg-amber-500 text-slate-900 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:bg-amber-400'}`}
                           >
-                            💳 Ödeme Yap
+                            {slot.status === 'AT_EXIT' ? '🚨 ACİL ÖDEME YAP' : '💳 Ödeme Yap'}
                           </button>
                        ) : (
                           <div className={`text-[10px] font-bold tracking-widest uppercase py-2.5 rounded-lg border text-center bg-emerald-500/10 border-emerald-500/30 text-emerald-400`}>
