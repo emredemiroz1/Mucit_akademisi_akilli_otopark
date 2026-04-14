@@ -22,8 +22,8 @@ const int IR_PARK[6] = {13, 14, 25, 26, 27, 34}; // P1 - P6
 // --- STANDART SERVO (SG90) AYARLARI ---
 #define SERVO_MIN_US       500
 #define SERVO_MAX_US       2400
-#define SERVO_OPEN_ANGLE   120  // Açık bariyer açısı
-#define SERVO_CLOSE_ANGLE  0    // Kapalı bariyer açısı
+#define SERVO_OPEN_ANGLE   45 // Açık bariyer açısı
+#define SERVO_CLOSE_ANGLE  179    // Kapalı bariyer açısı
 #define SERVO_HOLD_MS      3500 // Araç geçişi için bariyerin açık kalma süresi
 
 FirebaseData fbdoRead, fbdoWrite;
@@ -82,7 +82,7 @@ void openGate(Servo &servo, int pin, bool &isOpenFlag, unsigned long &timer) {
 void closeGateIfTimeout(Servo &servo, bool &isOpenFlag, unsigned long timer, String firebaseUrl) {
   if (isOpenFlag && (millis() - timer > SERVO_HOLD_MS)) {
     servo.write(SERVO_CLOSE_ANGLE);
-    delay(1000); // DÜZELTME: Servonun 175 dereceye tam inebilmesi için 1 saniye beklendi
+    delay(2000); // DÜZELTME: Servonun 175 dereceye tam inebilmesi için 1 saniye beklendi
     servo.detach(); 
     isOpenFlag = false;
     updateFirestoreBool(firebaseUrl, false);
