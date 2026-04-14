@@ -77,8 +77,8 @@ void openGate(Servo &servo, bool &isOpenFlag, unsigned long &timer) {
   timer = millis();
 }
 
-void closeGateIfTimeout(Servo &servo, bool &isOpenFlag, unsigned long timer, String firebaseKey) {
-  if (isOpenFlag && (millis() - timer > SERVO_HOLD_MS)) {
+void closeGateIfTimeout(Servo &servo, bool &isOpenFlag, unsigned long timer, String firebaseKey, bool sensorActive) {
+  if (isOpenFlag && !sensorActive && (millis() - timer > SERVO_HOLD_MS)) {
     servo.write(SERVO_CLOSE_ANGLE);
     isOpenFlag = false;
     updateFirestoreBool(firebaseKey, false);
@@ -234,8 +234,8 @@ void loop() {
   // =========================================================
   // 4. BARİYERLERİ OTOMATİK KAPATMA
   // =========================================================
-  closeGateIfTimeout(girisServosu, girisOpen, girisOpenTime, "entryGateOpen");
-  closeGateIfTimeout(cikisServosu, cikisOpen, cikisOpenTime, "exitGateOpen");
+  closeGateIfTimeout(girisServosu, girisOpen, girisOpenTime, "entryGateOpen", girisSensorAktif);
+  closeGateIfTimeout(cikisServosu, cikisOpen, cikisOpenTime, "exitGateOpen", cikisSensorAktif);
 
   // =========================================================
   // 5. DEBUG
