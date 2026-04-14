@@ -192,6 +192,8 @@
                  const isPhysicallyOccupied = getBool(`p${i}_occupied`);
                  const dbTimestamp = Number(getVal(`p${i}_timestamp`, 0));
                  const dbTimeStr = getVal(`p${i}_time`, "");
+                 const carOriginVal = Number(getVal("carOrigin", -1));
+                 const carPaidVal = getBool("carPaid");
 
                  if (isPhysicallyOccupied) {
                     if (!dbTimestamp) {
@@ -211,8 +213,8 @@
                  } else {
                     // Fiziksel olarak araç YOK
                     if (dbTimestamp > 0) {
-                       // DÜZELTME: Eğer ödeme yapıldıysa veya çıkış bariyeri açıksa, sil!
-                       if (getBool("carPaid") || getBool("exitGateOpen")) {
+                       // DÜZELTME: Bu spesifik slot ödendiyse veya çıkış bariyeri açıksa, sil!
+                       if ((carPaidVal && carOriginVal === i) || getBool("exitGateOpen")) {
                           newSlots[i] = { occupied: false, time: "", entryTimestamp: null, status: 'EMPTY' };
                           dbUpdates[`p${i}_timestamp`] = 0; 
                           dbUpdates[`p${i}_time`] = "";
